@@ -4,6 +4,7 @@
     "description": "",
     "license": "MIT",
     "author": "CBx0",
+    "repository": "https://github.com/CBx0-dev/BWorker",
     "type": "module",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
