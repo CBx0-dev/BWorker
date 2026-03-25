@@ -1,5 +1,5 @@
-import type {IWorker, Serializable} from "..";
-import type {Commands, InvokeCommand} from "../commands";
+import type {IWorker, Serializable} from "../index.js";
+import type {Commands, InvokeCommand} from "../commands.js";
 
 export class BrowserWorker implements IWorker {
     private readonly transactions: Map<number, (value?: Serializable) => void>;

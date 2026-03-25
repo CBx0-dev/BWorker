@@ -1,7 +1,7 @@
 import {parentPort as parent, workerData} from "worker_threads";
 
-import type {Serializable} from "..";
-import type {Commands, FulfillCommand, InitCommand, InvokeCommand} from "../commands";
+import type {Serializable} from "../index.js";
+import type {Commands, FulfillCommand, InitCommand, InvokeCommand} from "../commands.js";
 
 if (!parent) {
     throw "Cannot start worker: Parent handler is undefined";

@@ -1,5 +1,5 @@
-import type {Serializable} from "..";
-import type {Commands, FulfillCommand, InitCommand, InvokeCommand} from "../commands";
+import type {Serializable} from "../index.js";
+import type {Commands, FulfillCommand, InitCommand, InvokeCommand} from "../commands.js";
 
 let module: any | null = null;
 

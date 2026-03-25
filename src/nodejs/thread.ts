@@ -1,7 +1,7 @@
 import type {Worker} from "worker_threads";
 
-import type {Serializable, IWorker} from "..";
-import type {InvokeCommand, Commands} from "../commands";
+import type {Serializable, IWorker} from "../index.js";
+import type {InvokeCommand, Commands} from "../commands.js";
 
 export class NodeJSWorker implements IWorker {
     private readonly transactions: Map<number, (value?: Serializable) => void>;
@@ -24,7 +24,6 @@ export class NodeJSWorker implements IWorker {
         });
 
         this.worker.on("message", this.onCommand.bind(this));
-        this.worker.stdout.on("data", (chunk) => process.stdout.write(chunk));
     }
 
     public invoke(name: string, args: Serializable[]): Promise<Serializable> {

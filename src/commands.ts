@@ -1,4 +1,4 @@
-import type {Serializable} from ".";
+import type {Serializable} from "./index.js";
 
 export interface InvokeCommand {
     tid: number;
