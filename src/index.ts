@@ -75,11 +75,9 @@ export class Thread {
     private static async getWorker(): Promise<IWorkerCtor> {
         if (typeof window != "undefined" && typeof window.document != "undefined" ||
             typeof WorkerGlobalScope != "undefined" && self instanceof WorkerGlobalScope) {
-            // @ts-ignore
             const {BrowserWorker} = await import("./browser/thread.js");
             return BrowserWorker;
         } else {
-            // @ts-ignore
             const {NodeJSWorker} = await import("./nodejs/thread.js");
             return NodeJSWorker;
         }
