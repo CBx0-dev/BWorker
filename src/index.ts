@@ -1,27 +1,26 @@
 export interface IWorker {
     init(): Promise<void>;
 
-    invoke(name: string, args: Serilizable[]): Serilizable;
+    invoke(name: string, args: Serializable[]): Serializable;
 
     kill(): Promise<void>;
 }
 
 // @ts-ignore
-export type Serilizable = string | number | boolean | Record<string | number, Serilizable> | Array<Serilizable>;
+export type Serializable = string | number | boolean | Record<string | number, Serializable> | Array<Serializable>;
 
-export type ThreadFunction = (...args: Serilizable[]) => Promise<Serilizable>;
+export type ThreadFunction = (...args: Serializable[]) => Promise<Serializable>;
 
 export interface ThreadModule {
     [name: string]: ThreadFunction;
 }
 
 export interface IWorkerStatic {
-    isMaster(): boolean;
+    isMaster(): Promise<boolean>;
 }
 
 export type IWorkerCtor = (new (url: URL) => IWorker) & IWorkerStatic;
 
-// @ts-ignore
 export class Thread {
     private readonly worker: IWorker;
 
@@ -40,8 +39,7 @@ export class Thread {
                         return undefined;
                     }
 
-
-                    return (...args: Serilizable[]) => this.worker.invoke(prop, args);
+                    return (...args: Serializable[]) => this.worker.invoke(prop, args);
                 }
 
                 return value;
@@ -62,24 +60,26 @@ export class Thread {
         await this.worker.kill();
     }
 
-    public static async start<T extends ThreadModule>(url: URL): Promise<Thread & T> {
+    public static async start<T extends ThreadModule>(file: string, base: string): Promise<Thread & T> {
         const ctor: IWorkerCtor = await Thread.getWorker();    
-        const worker: IWorker = new ctor(url);
+        const worker: IWorker = new ctor(new URL(file, base));
         await worker.init();
-        const thread = new Thread(worker) as Thread & T;
-        return thread;
+        return new Thread(worker) as Thread & T;
     }
 
     public static async isMaster(): Promise<boolean> {
         const ctor: IWorkerCtor = await Thread.getWorker();
-        return ctor.isMaster(); 
+        return await ctor.isMaster();
     }
 
     private static async getWorker(): Promise<IWorkerCtor> {
-        if (typeof window != "undefined" && typeof window.document != "undefined") {
+        if (typeof window != "undefined" && typeof window.document != "undefined" ||
+            typeof WorkerGlobalScope != "undefined" && self instanceof WorkerGlobalScope) {
+            // @ts-ignore
             const {BrowserWorker} = await import("./browser/thread.js");
             return BrowserWorker;
         } else {
+            // @ts-ignore
             const {NodeJSWorker} = await import("./nodejs/thread.js");
             return NodeJSWorker;
         }

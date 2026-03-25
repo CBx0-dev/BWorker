@@ -1,22 +1,22 @@
-import {Worker, isMainThread} from "worker_threads";
+import type {Worker} from "worker_threads";
 
-import type {Serilizable, IWorker} from "..";
-import type {InvokeCommand, Commands} from "./shared";
+import type {Serializable, IWorker} from "..";
+import type {InvokeCommand, Commands} from "../commands";
 
 export class NodeJSWorker implements IWorker {
-    private readonly transactions: Map<number, (value?: Serilizable) => void>;
+    private readonly transactions: Map<number, (value?: Serializable) => void>;
     private readonly threadURL: URL;
     private worker!: Worker;
     
     public constructor(url: URL) {
-        this.transactions = new Map<number, (value?: Serilizable) => void>();
+        this.transactions = new Map<number, (value?: Serializable) => void>();
         this.threadURL = url;
     }
 
     public async init(): Promise<void> {
         const {Worker} = await import("worker_threads");
 
-        this.worker = new Worker(new URL("./worker.js", import.meta.url), {
+        this.worker = new Worker(new URL("./worker.js?url", import.meta.url), {
             workerData: {
                 module: this.threadURL.toString()
             },
@@ -27,8 +27,8 @@ export class NodeJSWorker implements IWorker {
         this.worker.stdout.on("data", (chunk) => process.stdout.write(chunk));
     }
 
-    public async invoke(name: string, args: Serilizable[]): Serilizable {    
-        return new Promise<Serilizable>(resolve => {
+    public invoke(name: string, args: Serializable[]): Promise<Serializable> {
+        return new Promise<Serializable>(resolve => {
             const tid: number = this.getNextTransactionId();
             this.transactions.set(tid, resolve);
             this.worker.postMessage({
@@ -45,7 +45,7 @@ export class NodeJSWorker implements IWorker {
     }
 
     private onCommand(cmd: Commands): void {
-        if (cmd.cmd == "fullfill") {
+        if (cmd.cmd == "fulfill") {
             const resolve = this.transactions.get(cmd.tid);
             if (!resolve) {
                 return;
@@ -65,7 +65,8 @@ export class NodeJSWorker implements IWorker {
         return i;
     }
 
-    public static isMaster(): boolean {
+    public static async isMaster(): Promise<boolean> {
+        const {isMainThread} = await import("worker_threads");
         return isMainThread;
     }
 }

@@ -4,7 +4,7 @@ console.log("[MASTER] Start thread...");
 
 const thread = await Thread.start<{
     foo(x: number): Promise<number>;
-}>(new URL("./worker.js", import.meta.url));
+}>("./worker.js", import.meta.url);
 
 console.log("[MASTER] Thread started");
 
@@ -15,7 +15,6 @@ for (let i = 0; i < 5; i++) {
 }
 
 await task;
-
 
 console.log("[MASTER] Kill thread...");
 await thread.kill();

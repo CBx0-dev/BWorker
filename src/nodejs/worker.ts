@@ -1,7 +1,7 @@
 import {parentPort as parent, workerData} from "worker_threads";
 
-import type {Commands,FulfillCommand} from "./shared";
-import { Serializable } from "child_process";
+import type {Serializable} from "..";
+import type {Commands, FulfillCommand, InitCommand, InvokeCommand} from "../commands";
 
 if (!parent) {
     throw "Cannot start worker: Parent handler is undefined";
@@ -12,9 +12,27 @@ if (!workerData.module || typeof workerData.module != "string") {
 
 const module: any = await import(workerData.module);
 
-function fullfill(tid: number, value?: Serializable) {
+async function init(_cmd: InitCommand): Promise<void> {
+    return;
+}
+
+async function invoke(cmd: InvokeCommand): Promise<void> {
+    const property = module[cmd.name];
+    if (typeof property != "function") {
+        throw `'${cmd.name}' is not a function`;
+    }
+
+    let result: Serializable | undefined | Promise<Serializable | undefined> = property(...cmd.args);
+    if (result instanceof Promise) {
+        result = await result;
+    }
+
+    fulfill(cmd.tid, result);
+}
+
+function fulfill(tid: number, value?: Serializable): void {
     const message: FulfillCommand = {
-        cmd: "fullfill",
+        cmd: "fulfill",
         tid: tid
     }
 
@@ -26,18 +44,16 @@ function fullfill(tid: number, value?: Serializable) {
 }
 
 parent.on("message", async (cmd: Commands) => {
-    if (cmd.cmd == "invoke") {
-        const property = module[cmd.name];
-        if (typeof property != "function") {
-            throw `'${cmd.name}' is not a function`;
-        }
-
-        let result: Serializable | undefined | Promise<Serializable | undefined> = property(...cmd.args);
-        if (result instanceof Promise) {
-            result = await result;
-        }
-
-        fullfill(cmd.tid, result);        
+    if (cmd.cmd == "init") {
+        await init(cmd);
+        return;
     }
+
+    if (cmd.cmd == "invoke") {
+        await invoke(cmd);
+        return;
+    }
+
+    throw `Unknown command '${cmd.cmd}'`;
 });
 
