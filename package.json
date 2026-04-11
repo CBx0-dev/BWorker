@@ -14,5 +14,9 @@
     "devDependencies": {
         "@types/node": "^25.5.0",
         "typescript": "^6.0.2"
+    },
+    "browser": {
+        "./dist/nodejs/thread.js": false,
+        "worker_threads": false
     }
 }
