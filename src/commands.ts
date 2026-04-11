@@ -13,10 +13,16 @@ export interface FulfillCommand {
     value?: Serializable;
 }
 
+export interface RejectCommand {
+    tid: number;
+    cmd: "reject";
+    value: string;
+}
+
 export interface InitCommand {
     tid: number;
     cmd: "init";
     module: string;
 }
 
-export type Commands = InvokeCommand | FulfillCommand | InitCommand;
+export type Commands = InvokeCommand | FulfillCommand | RejectCommand | InitCommand;

@@ -1,5 +1,5 @@
 import type {Serializable} from "../index.js";
-import type {Commands, FulfillCommand, InitCommand, InvokeCommand} from "../commands.js";
+import type {Commands, FulfillCommand, InitCommand, InvokeCommand, RejectCommand} from "../commands.js";
 
 let module: any | null = null;
 
@@ -39,6 +39,14 @@ function fulfill(tid: number, value?: Serializable): void {
     self.postMessage(message);
 }
 
+function reject(tid: number, err: string): void {
+    self.postMessage({
+        tid: tid,
+        cmd: "reject",
+        value: err
+    } satisfies RejectCommand);
+}
+
 self.onmessage = async function (ev: MessageEvent) {
     const cmd: Commands = ev.data;
     if (cmd.cmd == "init") {
@@ -47,7 +55,11 @@ self.onmessage = async function (ev: MessageEvent) {
     }
 
     if (cmd.cmd == "invoke") {
-        await invoke(cmd);
+        try {
+            await invoke(cmd);
+        } catch (e) {
+            reject(cmd.tid, String(e));
+        }
         return;
     }
 
