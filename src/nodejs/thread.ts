@@ -1,15 +1,17 @@
 import type {Worker} from "worker_threads";
 
-import type {Serializable, IWorker} from "../index.js";
-import type {InvokeCommand, Commands} from "../commands.js";
+import type {IWorker, Serializable} from "../index.js";
+import type {Commands, InvokeCommand} from "../commands.js";
+
+type TransactionTuple = [resolve: (value?: Serializable) => void, reject: (value: string) => void];
 
 export class NodeJSWorker implements IWorker {
-    private readonly transactions: Map<number, (value?: Serializable) => void>;
+    private readonly transactions: Map<number, TransactionTuple>;
     private readonly threadURL: URL;
     private worker!: Worker;
-    
+
     public constructor(url: URL) {
-        this.transactions = new Map<number, (value?: Serializable) => void>();
+        this.transactions = new Map<number, TransactionTuple>();
         this.threadURL = url;
     }
 
@@ -27,9 +29,9 @@ export class NodeJSWorker implements IWorker {
     }
 
     public invoke(name: string, args: Serializable[]): Promise<Serializable> {
-        return new Promise<Serializable>(resolve => {
+        return new Promise<Serializable>((resolve, reject) => {
             const tid: number = this.getNextTransactionId();
-            this.transactions.set(tid, resolve);
+            this.transactions.set(tid, [resolve, reject]);
             this.worker.postMessage({
                 cmd: "invoke",
                 tid,
@@ -45,13 +47,23 @@ export class NodeJSWorker implements IWorker {
 
     private onCommand(cmd: Commands): void {
         if (cmd.cmd == "fulfill") {
-            const resolve = this.transactions.get(cmd.tid);
-            if (!resolve) {
+            const transactionTuple: TransactionTuple | undefined = this.transactions.get(cmd.tid);
+            if (!transactionTuple) {
                 return;
             }
-            
+
+            const [resolve] = transactionTuple;
             this.transactions.delete(cmd.tid);
             resolve(cmd.value);
+        } else if (cmd.cmd == "reject") {
+            const transactionTuple: TransactionTuple | undefined = this.transactions.get(cmd.tid);
+            if (!transactionTuple) {
+                return;
+            }
+
+            const [, reject] = transactionTuple;
+            this.transactions.delete(cmd.tid);
+            reject(cmd.value);
         }
     }
 

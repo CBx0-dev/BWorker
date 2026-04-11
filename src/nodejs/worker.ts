@@ -1,7 +1,7 @@
 import {parentPort as parent, workerData} from "worker_threads";
 
 import type {Serializable} from "../index.js";
-import type {Commands, FulfillCommand, InitCommand, InvokeCommand} from "../commands.js";
+import type {Commands, FulfillCommand, InitCommand, InvokeCommand, RejectCommand} from "../commands.js";
 
 if (!parent) {
     throw "Cannot start worker: Parent handler is undefined";
@@ -43,6 +43,14 @@ function fulfill(tid: number, value?: Serializable): void {
     parent!.postMessage(message);
 }
 
+function reject(tid: number, err: string): void {
+    parent!.postMessage({
+        cmd: "reject",
+        tid: tid,
+        value: err
+    } satisfies RejectCommand);
+}
+
 parent.on("message", async (cmd: Commands) => {
     if (cmd.cmd == "init") {
         await init(cmd);
@@ -50,7 +58,11 @@ parent.on("message", async (cmd: Commands) => {
     }
 
     if (cmd.cmd == "invoke") {
-        await invoke(cmd);
+        try {
+            await invoke(cmd);
+        } catch (e) {
+            reject(cmd.tid, String(e));
+        }
         return;
     }
 
