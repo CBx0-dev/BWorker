@@ -10,13 +10,18 @@ if (!workerData.module || typeof workerData.module != "string") {
     throw "Cannot start worker: Missing module information";
 }
 
-const module: any = await import(workerData.module);
+let module: any | null = null;
 
-async function init(_cmd: InitCommand): Promise<void> {
-    return;
+async function init(cmd: InitCommand): Promise<void> {
+    module = await import(cmd.module);
+    fulfill(cmd.tid);
 }
 
 async function invoke(cmd: InvokeCommand): Promise<void> {
+    if (!module) {
+        throw "Module is not initialized. You have to first invoke a init command";
+    }
+
     const property = module[cmd.name];
     if (typeof property != "function") {
         throw `'${cmd.name}' is not a function`;
